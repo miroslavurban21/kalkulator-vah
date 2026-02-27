@@ -34,6 +34,10 @@
     margin: 0 auto 2.5rem;
     border-bottom: 2px solid var(--text);
     padding-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
   header h1 {
@@ -48,12 +52,34 @@
     margin-top: 0.3rem;
   }
 
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-top: 0.3rem;
+  }
+
+  .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .sync-dot.syncing { background: #f0a500; }
+  .sync-dot.synced  { background: #2d5a27; }
+  .sync-dot.error   { background: var(--danger); }
+
   .container {
     max-width: 720px;
     margin: 0 auto;
   }
 
-  /* Add exercise form */
   .add-form {
     display: flex;
     gap: 0.6rem;
@@ -72,9 +98,7 @@
     transition: border-color 0.15s;
   }
 
-  .add-form input[type="text"]:focus {
-    border-color: var(--accent);
-  }
+  .add-form input[type="text"]:focus { border-color: var(--accent); }
 
   .btn {
     padding: 0.7rem 1.3rem;
@@ -88,12 +112,7 @@
   }
 
   .btn:active { transform: scale(0.97); }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-  }
-
+  .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { opacity: 0.88; }
 
   .btn-danger {
@@ -106,7 +125,6 @@
 
   .btn-danger:hover { background: #fdf0ef; }
 
-  /* Exercise cards */
   .exercises { display: flex; flex-direction: column; gap: 1.2rem; }
 
   .card {
@@ -131,10 +149,7 @@
     background: var(--accent-light);
   }
 
-  .card-header h2 {
-    font-size: 1rem;
-    font-weight: 600;
-  }
+  .card-header h2 { font-size: 1rem; font-weight: 600; }
 
   .card-header .header-right {
     display: flex;
@@ -148,11 +163,7 @@
     gap: 0.5rem;
   }
 
-  .rm-input-wrap label {
-    font-size: 0.8rem;
-    color: var(--muted);
-    white-space: nowrap;
-  }
+  .rm-input-wrap label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
 
   .rm-input-wrap input[type="number"] {
     width: 80px;
@@ -167,19 +178,12 @@
     transition: border-color 0.15s;
   }
 
-  .rm-input-wrap input[type="number"]:focus {
-    border-color: var(--accent);
-  }
-
+  .rm-input-wrap input[type="number"]:focus { border-color: var(--accent); }
   .rm-input-wrap span { font-size: 0.8rem; color: var(--muted); }
 
-  /* Table */
   .table-wrap { overflow-x: auto; }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+  table { width: 100%; border-collapse: collapse; }
 
   thead th {
     font-family: var(--mono);
@@ -206,12 +210,7 @@
     border-bottom: 1px solid #f0ede8;
   }
 
-  tbody td:first-child {
-    text-align: left;
-    font-weight: 500;
-    color: var(--accent);
-  }
-
+  tbody td:first-child { text-align: left; font-weight: 500; color: var(--accent); }
   tbody tr:last-child td { border-bottom: none; }
 
   .highlight-row { background: var(--accent-light) !important; }
@@ -227,13 +226,28 @@
   }
 
   .empty-state span { display: block; font-size: 2rem; margin-bottom: 0.5rem; }
+
+  .loading {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Kalkulátor vah — % z maxima</h1>
-  <p>Zadej svůj 1RM a zobraz váhy od 40 % do 100 % s krokem 5 %.</p>
+  <div>
+    <h1>Kalkulátor vah — % z maxima</h1>
+    <p>Zadej svůj 1RM a zobraz váhy od 40 % do 100 % s krokem 5 %.</p>
+  </div>
+  <div>
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Připojování…</span>
+    </div>
+  </div>
 </header>
 
 <div class="container">
@@ -243,38 +257,96 @@
   </div>
 
   <div class="exercises" id="exercises">
-    <div class="empty-state" id="emptyState">
+    <div class="loading" id="loadingState">⏳ Načítám data…</div>
+    <div class="empty-state" id="emptyState" style="display:none">
       <span>🏋️</span>
       Zatím nemáš žádný cvik. Přidej první výše.
     </div>
   </div>
 </div>
 
-<script>
-  const exercises = [];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDd1SiUumGM9QQaT6CTgAKCpUs78EO0cFk",
+    databaseURL: "https://moje-aplikace-1bf1d-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "moje-aplikace-1bf1d",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const cvikyRef = ref(db, 'cviky');
+
+  let exercises = [];
+  let saveTimer = null;
+
+  const syncDot = document.getElementById('syncDot');
+  const syncLabel = document.getElementById('syncLabel');
+
+  function setStatus(state) {
+    syncDot.className = 'sync-dot ' + state;
+    if (state === 'syncing') syncLabel.textContent = 'Ukládám…';
+    if (state === 'synced')  syncLabel.textContent = 'Synchronizováno ✓';
+    if (state === 'error')   syncLabel.textContent = 'Chyba připojení';
+  }
+
+  // Real-time naslouchání změnám v databázi
+  onValue(cvikyRef, (snapshot) => {
+    exercises = snapshot.val() || [];
+    setStatus('synced');
+    renderAll();
+  }, () => {
+    setStatus('error');
+  });
+
+  function save() {
+    setStatus('syncing');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      set(cvikyRef, exercises)
+        .then(() => setStatus('synced'))
+        .catch(() => setStatus('error'));
+    }, 600);
+  }
 
   const input = document.getElementById('exerciseInput');
   input.addEventListener('keydown', e => { if (e.key === 'Enter') addExercise(); });
 
-  function addExercise() {
+  window.addExercise = function() {
     const name = input.value.trim();
     if (!name) return;
     exercises.push({ name, rm: '' });
     input.value = '';
+    save();
     renderAll();
   }
 
-  function removeExercise(i) {
+  window.removeExercise = function(i) {
     exercises.splice(i, 1);
+    save();
     renderAll();
+  }
+
+  window.updateRM = function(i, val) {
+    exercises[i].rm = val;
+    save();
+    const cards = document.querySelectorAll('.card');
+    const tableWrap = cards[i].querySelector('.table-wrap');
+    tableWrap.innerHTML = '';
+    tableWrap.appendChild(buildTable(val));
   }
 
   function renderAll() {
     const container = document.getElementById('exercises');
     const empty = document.getElementById('emptyState');
+    const loading = document.getElementById('loadingState');
 
-    // Clear old cards (keep emptyState)
-    [...container.children].forEach(c => { if (c !== empty) c.remove(); });
+    loading.style.display = 'none';
+    [...container.children].forEach(c => {
+      if (c !== empty && c !== loading) c.remove();
+    });
 
     if (exercises.length === 0) {
       empty.style.display = '';
@@ -283,8 +355,7 @@
     empty.style.display = 'none';
 
     exercises.forEach((ex, i) => {
-      const card = buildCard(ex, i);
-      container.appendChild(card);
+      container.appendChild(buildCard(ex, i));
     });
   }
 
@@ -340,15 +411,6 @@
     }
     table.appendChild(tbody);
     return table;
-  }
-
-  function updateRM(i, val) {
-    exercises[i].rm = val;
-    // Re-render only the table in this card
-    const cards = document.querySelectorAll('.card');
-    const tableWrap = cards[i].querySelector('.table-wrap');
-    tableWrap.innerHTML = '';
-    tableWrap.appendChild(buildTable(val));
   }
 
   function escHtml(s) {

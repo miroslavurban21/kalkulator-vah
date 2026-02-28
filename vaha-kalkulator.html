@@ -31,7 +31,7 @@
 
   header {
     max-width: 720px;
-    margin: 0 auto 2.5rem;
+    margin: 0 auto 2rem;
     border-bottom: 2px solid var(--text);
     padding-bottom: 1rem;
     display: flex;
@@ -40,17 +40,8 @@
     gap: 1rem;
   }
 
-  header h1 {
-    font-size: 1.6rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-
-  header p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    margin-top: 0.3rem;
-  }
+  header h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
+  header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.3rem; }
 
   .sync-status {
     display: flex;
@@ -63,8 +54,7 @@
   }
 
   .sync-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: #ccc;
     flex-shrink: 0;
@@ -75,16 +65,43 @@
   .sync-dot.synced  { background: #2d5a27; }
   .sync-dot.error   { background: var(--danger); }
 
-  .container {
-    max-width: 720px;
-    margin: 0 auto;
-  }
+  .container { max-width: 720px; margin: 0 auto; }
 
-  .add-form {
-    display: flex;
-    gap: 0.6rem;
+  .nav-box {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
     margin-bottom: 2rem;
   }
+
+  .nav-box h3 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.7rem;
+  }
+
+  .nav-list { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; }
+
+  .nav-list li a {
+    display: inline-block;
+    padding: 0.35rem 0.8rem;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1.5px solid transparent;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .nav-list li a:hover { border-color: var(--accent); background: #d4e8d0; }
+  .nav-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+
+  .add-form { display: flex; gap: 0.6rem; margin-bottom: 2rem; }
 
   .add-form input[type="text"] {
     flex: 1;
@@ -115,6 +132,17 @@
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { opacity: 0.88; }
 
+  .btn-back {
+    background: none;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .btn-back:hover { background: var(--accent-light); }
+
   .btn-danger {
     background: none;
     color: var(--danger);
@@ -133,6 +161,7 @@
     border-radius: 10px;
     overflow: hidden;
     animation: slideIn 0.2s ease;
+    scroll-margin-top: 1rem;
   }
 
   @keyframes slideIn {
@@ -150,19 +179,9 @@
   }
 
   .card-header h2 { font-size: 1rem; font-weight: 600; }
+  .card-header .header-right { display: flex; align-items: center; gap: 0.8rem; }
 
-  .card-header .header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-  }
-
-  .rm-input-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
+  .rm-input-wrap { display: flex; align-items: center; gap: 0.5rem; }
   .rm-input-wrap label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
 
   .rm-input-wrap input[type="number"] {
@@ -182,7 +201,6 @@
   .rm-input-wrap span { font-size: 0.8rem; color: var(--muted); }
 
   .table-wrap { overflow-x: auto; }
-
   table { width: 100%; border-collapse: collapse; }
 
   thead th {
@@ -198,7 +216,6 @@
   }
 
   thead th:first-child { text-align: left; }
-
   tbody tr { transition: background 0.1s; }
   tbody tr:hover { background: #fafaf8; }
 
@@ -226,13 +243,7 @@
   }
 
   .empty-state span { display: block; font-size: 2rem; margin-bottom: 0.5rem; }
-
-  .loading {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: var(--muted);
-    font-size: 0.95rem;
-  }
+  .loading { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.95rem; }
 </style>
 </head>
 <body>
@@ -251,6 +262,14 @@
 </header>
 
 <div class="container">
+
+  <div class="nav-box" id="navBox">
+    <h3>Přejít na cvik</h3>
+    <ul class="nav-list" id="navList">
+      <li><span class="nav-empty">Zatím žádné cviky…</span></li>
+    </ul>
+  </div>
+
   <div class="add-form">
     <input type="text" id="exerciseInput" placeholder="Název cviku (např. Bench press)" maxlength="50">
     <button class="btn btn-primary" onclick="addExercise()">＋ Přidat cvik</button>
@@ -292,14 +311,11 @@
     if (state === 'error')   syncLabel.textContent = 'Chyba připojení';
   }
 
-  // Real-time naslouchání změnám v databázi
   onValue(cvikyRef, (snapshot) => {
     exercises = snapshot.val() || [];
     setStatus('synced');
     renderAll();
-  }, () => {
-    setStatus('error');
-  });
+  }, () => setStatus('error'));
 
   function save() {
     setStatus('syncing');
@@ -324,9 +340,39 @@
   }
 
   window.removeExercise = function(i) {
-    exercises.splice(i, 1);
-    save();
-    renderAll();
+    showConfirm(`Opravdu chceš odebrat cvik „${exercises[i].name}"?`, () => {
+      exercises.splice(i, 1);
+      save();
+      renderAll();
+    });
+  }
+
+  function showConfirm(message, onYes) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    `;
+    overlay.innerHTML = `
+      <div style="background:#fff; border-radius:12px; padding:1.5rem 1.8rem;
+                  max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+        <p style="font-family:'DM Sans',sans-serif; font-size:0.95rem;
+                  color:#1a1a18; margin-bottom:1.3rem; line-height:1.5;">${message}</p>
+        <div style="display:flex; gap:0.6rem; justify-content:flex-end;">
+          <button id="confirmNo" style="padding:0.6rem 1.2rem; border-radius:6px;
+            border:1.5px solid #e0ddd6; background:none; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; font-weight:600; cursor:pointer; color:#1a1a18;">Ne</button>
+          <button id="confirmYes" style="padding:0.6rem 1.2rem; border-radius:6px;
+            border:none; background:#c0392b; color:#fff; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; font-weight:600; cursor:pointer;">Ano</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirmYes').onclick = () => { overlay.remove(); onYes(); };
+    overlay.querySelector('#confirmNo').onclick  = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   }
 
   window.updateRM = function(i, val) {
@@ -336,6 +382,24 @@
     const tableWrap = cards[i].querySelector('.table-wrap');
     tableWrap.innerHTML = '';
     tableWrap.appendChild(buildTable(val));
+  }
+
+  function slugify(name) {
+    return 'cvik-' + name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') || 'cvik';
+  }
+
+  function renderNav() {
+    const navList = document.getElementById('navList');
+    if (exercises.length === 0) {
+      navList.innerHTML = '<li><span class="nav-empty">Zatím žádné cviky…</span></li>';
+      return;
+    }
+    const sorted = exercises
+      .map((ex, i) => ({ ex, i }))
+      .sort((a, b) => a.ex.name.localeCompare(b.ex.name, 'cs'));
+    navList.innerHTML = sorted.map(({ ex, i }) =>
+      `<li><a href="#${slugify(ex.name)}-${i}">${escHtml(ex.name)}</a></li>`
+    ).join('');
   }
 
   function renderAll() {
@@ -348,20 +412,18 @@
       if (c !== empty && c !== loading) c.remove();
     });
 
-    if (exercises.length === 0) {
-      empty.style.display = '';
-      return;
-    }
+    renderNav();
+
+    if (exercises.length === 0) { empty.style.display = ''; return; }
     empty.style.display = 'none';
 
-    exercises.forEach((ex, i) => {
-      container.appendChild(buildCard(ex, i));
-    });
+    exercises.forEach((ex, i) => container.appendChild(buildCard(ex, i)));
   }
 
   function buildCard(ex, i) {
     const card = document.createElement('div');
     card.className = 'card';
+    card.id = slugify(ex.name) + '-' + i;
 
     const header = document.createElement('div');
     header.className = 'card-header';
@@ -373,6 +435,7 @@
           <input type="number" min="0" step="0.5" placeholder="0" value="${ex.rm}" oninput="updateRM(${i}, this.value)">
           <span>kg</span>
         </div>
+        <a href="#navBox" class="btn btn-back">↑ Seznam</a>
         <button class="btn btn-danger" onclick="removeExercise(${i})">Odebrat</button>
       </div>
     `;
@@ -391,13 +454,9 @@
     const rmVal = parseFloat(rm) || 0;
 
     table.innerHTML = `
-      <thead>
-        <tr>
-          <th>%</th>
-          <th>Váha (kg)</th>
-          <th>Zaokrouhleno (2,5 kg)</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th>%</th><th>Váha (kg)</th><th>Zaokrouhleno (2,5 kg)</th>
+      </tr></thead>
     `;
 
     const tbody = document.createElement('tbody');
